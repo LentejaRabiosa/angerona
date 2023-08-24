@@ -20,8 +20,8 @@ namespace arguments_parser {
 
     class Range {
         public:
-        std::size_t min = 1;
-        std::size_t max = 1;
+        std::size_t min = 0;
+        std::size_t max = 0;
     };
 
     class Argument {
@@ -53,58 +53,47 @@ namespace arguments_parser {
     };
 
     typedef struct {
+        std::string title;
+        std::string description;
+        std::string epilog;
+    } Info;
+
+    typedef struct {
         std::vector<std::string> &names;
         std::string &help;
         ArgumentType type;
     } Label;
 
-    class Group {
-        std::string title;
-        std::string description;
-        std::string epilog;
+    class Group : public Info {
+        friend class Parser;
 
-        public:
         std::vector<Label> labels;
-
-        Group& set_title(std::string t);
-        Group& set_description(std::string d);
-        Group& set_epilog(std::string e);
         std::string print() const;
     };
 
-    /*
-     *  TODO: specific classes for Optionals and Positionals ??
-     */
-    class Parser {
+    class Parser : public Info {
         std::vector<std::string> names;
-        std::string custom_usage;
-        std::string description;
         std::string prefix_chars = "-";
-        bool is_parsed = false;
-
         // arguments
         std::list<Argument> positionals;
         std::list<Argument> optionals;
         std::map<std::string, Argument_i> positionals_map;
         std::map<std::string, Argument_i> optionals_map;
-
         // subparsers
         typedef std::list<std::reference_wrapper<Parser>>::iterator Parser_i;
         std::list<std::reference_wrapper<Parser>> subparsers;
         std::map<std::string, Parser_i> commands;
-        std::map<std::string, bool> used_commands;
-
         // groups
         std::map<std::string, Group> groups;
+        Group commands_group;
 
-        Argument operator[](std::string name);
+        Argument& get_argument(std::string name);
 
         public:
-        Group commands_group;
+        bool is_parsed = false;
 
         Parser(std::string name);
         void set_version(std::string v);
-        void set_description(std::string d);
         Group& add_group(std::string group);
         Argument& add_argument(std::vector<std::string> names, std::string group);
         void add_subparser(Parser& parser);
@@ -117,9 +106,9 @@ namespace arguments_parser {
         void help();
         void help(std::vector<std::string> group_names);
 
-        bool is_command_used(std::string command) const;
-        std::string used_command() const;
+
         std::vector<std::string> get_values(std::string name);
+        bool is_used(std::string);
     };
 
 } // namespace arguments_parser

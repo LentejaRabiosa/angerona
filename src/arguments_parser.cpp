@@ -48,13 +48,22 @@ Argument& Argument::remaining() {
 Argument::Argument_i Argument::consume(Argument_i start, Argument_i end) {
     is_used = true;
     
+    auto min = range.min;
+    auto max = range.max;
     auto distance = std::distance(start, end);
-    if (range.max > distance < range.min) throw error::arguments_parser::TooFewArguments();
+    if (distance < min) throw error::arguments_parser::TooFewArguments();
 
-    while (range.min < range.max) {
+    auto current = values.size();
+    while (current < min && start != end) {
         values.push_back(*start);
+        current++;
         start++;
-        range.min++;
+    }
+
+    while (min < max && start != end) {
+        values.push_back(*start);
+        min++;
+        start++;
     }
 
     return start;
@@ -71,30 +80,17 @@ Argument::Argument_i Argument::consume(Argument_i start, Argument_i end) {
 /*
  *  Group
  */
-Group& Group::set_title(std::string t) {
-    title = t;
-    return *this;
-}
-
-Group& Group::set_description(std::string d) {
-    description = d;
-    return *this;
-}
-
-Group& Group::set_epilog(std::string e) {
-    epilog = e;
-    return *this;
-}
-
 std::string Group::print() const {
     std::stringstream ss;
 
-    if (!title.empty()) ss << title << std::endl;
+    if (!title.empty()) ss << style::set(color::White, decorator::Bold, title) << std::endl;
     if (!description.empty()) ss << description << std::endl;
 
     for (const auto &label : labels) {
         ss << "  ";
-        for (const auto &name : label.names) ss << name << "  ";
+        if (label.type == Positional) for (const auto &name : label.names) ss << "<" << name << ">  ";
+        else if (label.type == Optional) for (const auto &name : label.names) ss << style::set(color::White, decorator::Underline, name) << "  ";
+        else for (const auto &name : label.names) ss << name << "  ";
         ss << label.help << std::endl;;
     }
 
@@ -120,10 +116,6 @@ void Parser::set_version(std::string v) {
     names.push_back(v);
 }
 
-void Parser::set_description(std::string d) {
-    description = d;
-}
-
 Group& Parser::add_group(std::string group) {
     auto group_i = groups.emplace(group, Group());
     return group_i.first->second;
@@ -140,10 +132,10 @@ Argument& Parser::add_argument(std::vector<std::string> names, std::string group
     if (!is_optional(names, prefix_chars)) {
         positionals.splice(positionals.end(), optionals, argument);
         for (const auto &name : names) positionals_map.emplace(name, argument);
-        label.type = Optional;
+        label.type = Positional;
     } else {
         for (const auto &name : names) optionals_map.emplace(name, argument);
-        label.type = Positional;
+        label.type = Optional;
     }
 
     group_i->second.labels.push_back(label);
@@ -153,7 +145,6 @@ Argument& Parser::add_argument(std::vector<std::string> names, std::string group
 
 void Parser::add_subparser(Parser& parser) {
     auto subparser = subparsers.emplace(subparsers.end(), parser);
-    used_commands.emplace(parser.names[0], false);
     commands.emplace(parser.names[0], subparser);
 
     Label label {parser.names, parser.description, Command};
@@ -166,30 +157,33 @@ void Parser::parse(int argc, const char **const argv) {
 
 void Parser::parse(std::vector<std::string> raw_names) {
     auto positionals_i = positionals.begin();
-    for (auto name = std::next(raw_names.begin()); name != raw_names.end(); name++) {
+    for (auto name = std::next(raw_names.begin()); name != raw_names.end();) {
         const auto &arg = *name;
+
+        if (arg == "--help" || arg == "-h") {
+            help();
+            throw error::arguments_parser::HelpAbort();
+        }
 
         if (const auto &optional_i = optionals_map.find(arg); optional_i != optionals_map.end()) {
             // OPTIONAL
-            optional_i->second->is_used = true;
+            name = optional_i->second->consume(name++, raw_names.end());
 
         } else if (const auto &subparser_i = commands.find(arg); subparser_i != commands.end()) {
             // COMMAND
             subparser_i->second->get().parse(std::vector(name, raw_names.end()));
-            used_commands[arg] = true;
             break;
 
         } else if (positionals_i != positionals.end()) {
             // POSITIONAL
-            positionals_i->is_used = true;
-            positionals_i->value = std::string(arg);
+            name = positionals_i->consume(name, raw_names.end());
             positionals_i++;
 
         } else throw error::arguments_parser::InvalidArgument(arg);
     }
 
     // validate
-    if (positionals_i != positionals.end()) throw error::arguments_parser::MissingArguments(positionals_i->names.front());
+    if (positionals_i != positionals.end()) throw error::arguments_parser::MissingArguments();
 
     is_parsed = true;
 }
@@ -224,22 +218,16 @@ void Parser::help(std::vector<std::string> group_names) {
     std::cout << ss.str();
 }
 
-bool Parser::is_command_used(std::string command) const {
-    return used_commands.find(command) != used_commands.end();
-}
-
-std::string Parser::used_command() const {
-    for (const auto &command_i : used_commands) if (command_i.second) return command_i.first;
-    return "";
-}
-
-Argument Parser::operator[](std::string name) {
+Argument& Parser::get_argument(std::string name) {
     if (const auto &optional_i = optionals_map.find(name); optional_i != optionals_map.end()) return *optional_i->second;
     if (const auto &positional_i = positionals_map.find(name); positional_i != positionals_map.end()) return *positional_i->second;
     throw std::runtime_error("Unknown argument");
 }
 
 std::vector<std::string> Parser::get_values(std::string name) {
-    auto argument = *this[name];
+    return get_argument(name).values;
+}
 
+bool Parser::is_used(std::string name) {
+    return get_argument(name).is_used;
 }
