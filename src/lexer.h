@@ -9,38 +9,58 @@
 #include <exception>
 #include <stdexcept>
 #include <algorithm>
+#include <memory>
 
 #include "errors.h"
 
 namespace lexer {
 
-    enum Token {
+    typedef struct Location {
+        unsigned int line;
+        unsigned int column;
+
+        std::string print();
+    } Location;
+
+    enum TokenType {
+        none,
         eof_,
         eol_,
         indent,
+        name,
         symbol,
         operator_,
+        delimiter,   //  ;
+        opener,      //  ([{<
+        closer,      //  )]}>
         fn,
-        i32,
         return_,
         if_,
         else_,
+        mut,
+        static_,
+        raw,
     };
 
-    typedef struct {
+    typedef struct Token {
+        TokenType type = none;
         std::string expresion;
-        Token token;
-    } Item;
+        Location location;
+
+        void process();
+    } Token;
 
     class Lexer {
-        typedef std::map<std::string, std::ifstream> files_map;
-        files_map files;
-        std::vector<std::string> extensions {"aro"};
-        std::string get_extension(std::string file_name);
+        std::ifstream &file;
+        Location current_location {1, 0};
+        std::string openers {"([{<"};
+        std::string closers {")]}>"};
 
         public:
-        Lexer(std::vector<std::string> file_names);
-        Item consume(std::string name);
+
+        Lexer(std::ifstream &file);
+        Token next();
+        void to_file(std::string file_name);
     };
 
 } // namespace lexer
