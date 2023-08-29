@@ -6,6 +6,7 @@
 #include "errors.h"
 #include "style.h"
 #include "lexer.h"
+#include "parser.h"
 
 int main(int argc, const char **argv) {
     std::cout << "Running Angerona in " << argv[0] << std::endl;
@@ -34,6 +35,15 @@ int main(int argc, const char **argv) {
     run.description = "Run the proyect if has been build or compiled";
     program.add_subparser(run);
 
+    arguments_parser::Parser lexer("lexer");
+    lexer.description = "Generates a file with the lexer output of a given file";
+    lexer.add_group("options").title = "Options:";
+    lexer.add_argument({"file"}, "options")
+        .set_help("File to process");
+    lexer.add_argument({"-o", "--output"}, "options")
+        .set_help("Output file name");
+    program.add_subparser(lexer);
+
     if (argc <= 1) {
         program.help();
         return 0;
@@ -50,12 +60,17 @@ int main(int argc, const char **argv) {
         std::cout << err.what() << std::endl;
         return 1;
     }
+    catch (error::arguments_parser::TooFewArguments err) {
+        std::cout << err.what() << std::endl;
+        return 1;
+    }
     catch (error::arguments_parser::HelpAbort) {}
 
 
 
 
 
+    try {
     if (init.is_parsed) {
         std::cout << "Creating proyect" << std::endl;
 
@@ -64,13 +79,34 @@ int main(int argc, const char **argv) {
         auto file_names = compile.get_values("files...");
 
         try {
-            lexer::Lexer l(file_names);
-            auto item = l.consume("caca.aro");
+            parser::Parser p(file_names);
         }
-        catch (error::lexer::UnknownFileExtension err) {
+        catch (error::files::UnknownFileExtension err) {
             std::cout << err.what() << std::endl;
             return 1;
         }
+
+    } else if (lexer.is_parsed) {
+        std::cout << "Running the lexer..." << std::endl;
+
+        auto file_name = lexer.get_values("file")[0];
+        std::ifstream file(file_name);
+        if (!file.is_open()) throw error::files::CouldNotOpenFile(file_name.data());
+
+        auto lx = lexer::Lexer(file);
+        std::string output_name;
+        if (lexer.is_used("-o")) {
+            output_name = lexer.get_values("-o")[0];
+        } else {
+            output_name = files::name(file_name) + ".lexer";
+        }
+
+        lx.to_file(output_name);
+    }
+    } // try
+    catch (error::files::CouldNotOpenFile err) {
+        std::cout << err.what() << std::endl;
+        return 1;
     }
 
 
