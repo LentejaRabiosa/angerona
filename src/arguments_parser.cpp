@@ -53,10 +53,8 @@ Argument::Argument_i Argument::consume(Argument_i start, Argument_i end) {
     auto distance = std::distance(start, end);
     if (distance < min) throw error::arguments_parser::TooFewArguments();
 
-    auto current = values.size();
-    while (current < min && start != end) {
+    while (values.size() < min && start != end) {
         values.push_back(*start);
-        current++;
         start++;
     }
 
@@ -167,7 +165,7 @@ void Parser::parse(std::vector<std::string> raw_names) {
 
         if (const auto &optional_i = optionals_map.find(arg); optional_i != optionals_map.end()) {
             // OPTIONAL
-            name = optional_i->second->consume(name++, raw_names.end());
+            name = optional_i->second->consume(++name, raw_names.end());
 
         } else if (const auto &subparser_i = commands.find(arg); subparser_i != commands.end()) {
             // COMMAND

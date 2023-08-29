@@ -20,8 +20,8 @@ namespace arguments_parser {
 
     class Range {
         public:
-        std::size_t min = 0;
-        std::size_t max = 0;
+        std::size_t min = 1;
+        std::size_t max = 1;
     };
 
     class Argument {
