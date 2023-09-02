@@ -20,6 +20,8 @@ std::string Location::print() {
  */
 void Token::process() {
     if (expresion == "fn")          type = fn;
+    else if (expresion == "if")     type = if_;
+    else if (expresion == "else")   type = else_;
     else if (expresion == "return") type = return_;
     else if (expresion == "mut")    type = mut;
     else if (expresion == "static") type = static_;
@@ -57,8 +59,34 @@ Token Lexer::next() {
         }
 
         current_location.column++;
-        if (ch == ' ') break;
+
+        if (ch == ' ') {
+            token.process();
+            token.location = current_location;
+            token.location.column -= token.expresion.size();
+            return token;
+        }
+
         token.expresion += ch;
+
+        auto next_ch = file.peek();
+        if (next_ch == ';' || openers.find(next_ch) != std::string::npos || closers.find(next_ch) != std::string::npos) break;
+
+        if (ch == ';') {
+            token.type = delimiter;
+            break;
+        }
+
+        if (openers.find(ch) != std::string::npos) {
+            token.type = opener;
+            break;
+        }
+
+        if (closers.find(ch) != std::string::npos) {
+            token.type = closer;
+            break;
+        }
+
         if (file.peek() == '\n' || ch == '\n') {
             token.location = current_location;
             token.location.column -= token.expresion.size() - 1;
@@ -71,9 +99,9 @@ Token Lexer::next() {
         };
     }
 
-    token.process();
+    if (token.type == none) token.process();
     token.location = current_location;
-    token.location.column -= token.expresion.size();
+    token.location.column -= token.expresion.size() - 1;
     return token;
 }
 
@@ -83,6 +111,10 @@ void Lexer::to_file(std::string file_name) {
 
     while (token.type != eof_) {
         token = next();
-        output << token.expresion << "     " << token.location.print() << std::endl;
+
+        std::string spaces;
+        for (int i = 10 - token.expresion.size(); i > 0; i--) spaces += ' ';
+
+        output << token.expresion << spaces << token.location.print() << "  " << token.type << std::endl;
     }
 }
