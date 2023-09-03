@@ -71,7 +71,6 @@ Token Lexer::next() {
 
         auto next_ch = file.peek();
         if (next_ch == ';' || openers.find(next_ch) != std::string::npos || closers.find(next_ch) != std::string::npos) break;
-
         if (ch == ';') {
             token.type = delimiter;
             break;

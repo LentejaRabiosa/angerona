@@ -34,6 +34,7 @@ namespace lexer {
         opener,      //  ([{<
         closer,      //  )]}>
         fn,
+        struct_,
         return_,
         if_,
         else_,
