@@ -23,8 +23,10 @@ void Token::process() {
     else if (expresion == "if")     type = if_;
     else if (expresion == "else")   type = else_;
     else if (expresion == "return") type = return_;
+    else if (expresion == "struct") type = struct_;
     else if (expresion == "mut")    type = mut;
     else if (expresion == "static") type = static_;
+    else if (expresion == "pub")    type = pub;
     else if (expresion == "raw")    type = raw;
     else if (expresion == "\n")     { type = eol_; expresion = "eol"; }
     else                            type = name;
@@ -96,6 +98,12 @@ Token Lexer::next() {
             }
             return token;
         };
+
+        if (ch == '/' && file.peek() == '/') {
+            while (file.peek() != '\n') file.ignore();
+            file.ignore();
+            token.expresion.clear();
+        }
     }
 
     if (token.type == none) token.process();

@@ -35,11 +35,13 @@ namespace lexer {
         closer,      //  )]}>
         fn,
         struct_,
+        enum_,
         return_,
         if_,
         else_,
         mut,
         static_,
+        pub,
         raw,
     };
 
