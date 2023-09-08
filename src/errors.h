@@ -94,6 +94,15 @@ namespace error {
             const char* what();
         };
 
+        class InvalidName : std::exception {
+            std::string error;
+            static std::string initError(std::string_view name);
+
+            public:
+            InvalidName(std::string_view name);
+            const char* what();
+        };
+
     } // namespace parser
 
 } // namespace errors

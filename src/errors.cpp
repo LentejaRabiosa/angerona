@@ -149,3 +149,23 @@ std::string parser::BadKeywordsOrder::initError(std::string_view kw1, std::strin
 const char* parser::BadKeywordsOrder::what() {
     return error.data();
 }
+
+
+
+
+
+
+/*
+ *  Invalid Name
+ */
+parser::InvalidName::InvalidName(std::string_view name) :
+    error(initError(name))
+{}
+std::string parser::InvalidName::initError(std::string_view name) {
+    return style::error()
+        + " invalid name: "
+        + name.data();
+}
+const char* parser::InvalidName::what() {
+    return error.data();
+}
