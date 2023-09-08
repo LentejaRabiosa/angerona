@@ -81,7 +81,7 @@ int main(int argc, const char **argv) {
             auto file_names = compile.get_values("files...");
 
             try {
-                parser::Parser p(file_names);
+                parser::FilesParser files_parser(file_names);
             }
             catch (error::files::UnknownFileExtension err) {
                 std::cout << err.what() << std::endl;
@@ -92,6 +92,10 @@ int main(int argc, const char **argv) {
                 return 1;
             }
             catch (error::parser::BadKeywordsOrder err) {
+                std::cout << err.what() << std::endl;
+                return 1;
+            }
+            catch (error::parser::InvalidName err) {
                 std::cout << err.what() << std::endl;
                 return 1;
             }
